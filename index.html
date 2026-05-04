@@ -2,16 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Configuraciones clave para iOS y PWA -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Gastos">
     <link rel="manifest" href="manifest.json">
-    
-    <title>Registro de Gastos</title>
     <link rel="apple-touch-icon" href="icono.png">
     
+    <title>Registro de Gastos</title>
     <style>
         /* Diseño Dark Mode Minimalista */
         body {
@@ -25,7 +23,7 @@
             align-items: center;
             height: 100vh;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent; /* Quita el destello azul en iOS al tocar */
+            -webkit-tap-highlight-color: transparent;
         }
 
         h1 {
@@ -66,22 +64,45 @@
             gap: 15px;
             width: 100%;
             max-width: 350px;
+            margin-bottom: 30px; /* Espacio antes del botón final */
         }
 
         .btn-categoria {
             background-color: #2c2c2e;
             color: #fff;
-            border: none;
+            border: 2px solid transparent;
             padding: 20px 10px;
             font-size: 16px;
             font-weight: 600;
             border-radius: 12px;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        /* Estado cuando la categoría está seleccionada */
+        .btn-categoria.seleccionada {
+            background-color: #3d3d3d;
+            border-color: #ffffff;
+        }
+
+        /* Botón de Confirmación Principal */
+        .btn-cargar {
+            background-color: #4CAF50; /* Verde */
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 350px;
+            cursor: pointer;
+            display: block; /* Centrado */
             transition: background-color 0.2s;
         }
 
-        .btn-categoria:active {
-            background-color: #4CAF50; /* Feedback visual al tocar */
+        .btn-cargar:active {
+            background-color: #3e8e41; /* Verde más oscuro al tocar */
         }
 
         /* Mensaje de Confirmación */
@@ -99,38 +120,55 @@
 
     <h1>💰 Nuevo Gasto</h1>
 
-    <!-- inputmode="decimal" levanta el teclado numérico en iOS -->
     <input type="number" id="monto" placeholder="$ 0" inputmode="decimal" pattern="[0-9]*">
 
     <div class="grid-categorias">
-        <button class="btn-categoria" onclick="guardarGasto('Almuerzo laburo')">Almuerzo laburo</button>
-        <button class="btn-categoria" onclick="guardarGasto('Planes')">Planes</button>
-        <button class="btn-categoria" onclick="guardarGasto('Deporte')">Deporte</button>
-        <button class="btn-categoria" onclick="guardarGasto('Fiesta')">Fiesta</button>
-        <button class="btn-categoria" onclick="guardarGasto('Transporte')">Transporte</button>
-        <button class="btn-categoria" onclick="guardarGasto('Compras')">Compras</button>
+        <!-- Ahora los botones solo seleccionan, no envían -->
+        <button class="btn-categoria" onclick="seleccionarCategoria(this, 'Almuerzo laburo')">Almuerzo laburo</button>
+        <button class="btn-categoria" onclick="seleccionarCategoria(this, 'Planes')">Planes</button>
+        <button class="btn-categoria" onclick="seleccionarCategoria(this, 'Deporte')">Deporte</button>
+        <button class="btn-categoria" onclick="seleccionarCategoria(this, 'Fiesta')">Fiesta</button>
+        <button class="btn-categoria" onclick="seleccionarCategoria(this, 'Transporte')">Transporte</button>
+        <button class="btn-categoria" onclick="seleccionarCategoria(this, 'Compras')">Compras</button>
     </div>
+
+    <!-- El nuevo botón centrado y verde -->
+    <button class="btn-cargar" onclick="ejecutarCarga()">Cargar Gasto</button>
 
     <div id="mensaje">Gasto guardado ✅</div>
 
     <script>
-        // --- PEGA TU URL AQUÍ ABAJO ---
+        // --- PEGA TU URL AQUÍ ABAJO OTRA VEZ ---
         const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw1l5siBPXwvbZZMxRhmJHGwSCP0q13zT2paf6uQ1JkIv7hCeXtzhQHYVhqKKtgSm3JHA/exec";
-        // ------------------------------
+        // ---------------------------------------
 
-        function guardarGasto(categoria) {
+        // Variable para recordar qué categoría tocó el usuario
+        let categoriaElegida = "";
+
+        // Función 1: Solo pinta el botón elegido y guarda el nombre
+        function seleccionarCategoria(botonHTML, nombreCategoria) {
+            categoriaElegida = nombreCategoria;
+
+            // Le quitamos la clase 'seleccionada' a todos los botones
+            const botones = document.querySelectorAll('.btn-categoria');
+            botones.forEach(b => b.classList.remove('seleccionada'));
+
+            // Se la ponemos solo al botón que acabamos de tocar
+            botonHTML.classList.add('seleccionada');
+        }
+
+        // Función 2: Lee los datos y los envía al Sheet
+        function ejecutarCarga() {
             const inputMonto = document.getElementById('monto');
             const montoValor = inputMonto.value;
 
-            // Si el monto está vacío, no hacemos nada (evita errores silenciosos)
-            if (montoValor === "") return;
+            // Control de seguridad: Si no puso monto o no eligió categoría, no hace nada
+            if (montoValor === "" || categoriaElegida === "") return;
 
-            // Preparamos los datos
             const formData = new URLSearchParams();
             formData.append('monto', montoValor);
-            formData.append('categoria', categoria);
+            formData.append('categoria', categoriaElegida);
 
-            // Enviamos los datos en segundo plano (mode: 'no-cors' garantiza que no haya bloqueos de seguridad del navegador)
             fetch(URL_GOOGLE_SCRIPT, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -139,13 +177,16 @@
                 },
                 body: formData.toString()
             }).then(() => {
-                // Éxito: Limpiamos el input y mostramos mensaje
+                // Limpiar todo después de enviar con éxito
                 inputMonto.value = '';
+                categoriaElegida = '';
+                document.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('seleccionada'));
                 mostrarConfirmacion();
             }).catch(() => {
-                // En caso de fallo de red, asumimos la política de no mostrar errores técnicos,
-                // pero limpiamos igual para mantener el flujo rápido.
+                // Limpiar todo incluso si hay fallo de red (para que el usuario no se trabe)
                 inputMonto.value = '';
+                categoriaElegida = '';
+                document.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('seleccionada'));
                 mostrarConfirmacion(); 
             });
         }
@@ -153,8 +194,6 @@
         function mostrarConfirmacion() {
             const msj = document.getElementById('mensaje');
             msj.style.opacity = '1';
-            
-            // Ocultar mensaje después de 2 segundos
             setTimeout(() => {
                 msj.style.opacity = '0';
             }, 2000);
